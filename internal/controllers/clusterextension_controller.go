@@ -43,6 +43,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	apimachyaml "k8s.io/apimachinery/pkg/util/yaml"
+	pkocorev1alpha1 "package-operator.run/apis/core/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -278,6 +279,14 @@ func (r *ClusterExtensionReconciler) reconcile(ctx context.Context, ext *ocv1alp
 	ext.Status.ResolvedBundle = bundleutil.MetadataFor(resolvedBundle.Name, *resolvedBundleVersion)
 	setResolvedStatusConditionSuccess(ext, fmt.Sprintf("resolved to %q", resolvedBundle.Image))
 
+	if ext.Annotations != nil && ext.Annotations["package-operator.run/take-this"] == "True" {
+		pkoReconciler := &pkoReconciler{
+			client: r.Client,
+			scheme: r.Scheme(),
+		}
+		return pkoReconciler.Reconcile(ctx, ext, resolvedBundle)
+	}
+
 	bundleSource := &rukpaksource.BundleSource{
 		Type: rukpaksource.SourceTypeImage,
 		Image: &rukpaksource.ImageSource{
@@ -511,6 +520,7 @@ func SetDeprecationStatus(ext *ocv1alpha1.ClusterExtension, bundleName string, d
 func (r *ClusterExtensionReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	controller, err := ctrl.NewControllerManagedBy(mgr).
 		For(&ocv1alpha1.ClusterExtension{}).
+		Owns(&pkocorev1alpha1.ClusterPackage{}).
 		Watches(&catalogd.ClusterCatalog{},
 			crhandler.EnqueueRequestsFromMapFunc(clusterExtensionRequestsForCatalog(mgr.GetClient(), mgr.GetLogger())),
 			builder.WithPredicates(predicate.Funcs{

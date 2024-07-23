@@ -10,6 +10,7 @@ import (
 	catalogd "github.com/operator-framework/catalogd/api/core/v1alpha1"
 
 	ocv1alpha1 "github.com/operator-framework/operator-controller/api/v1alpha1"
+	pkocorev1alpha1 "package-operator.run/apis/core/v1alpha1"
 )
 
 var Scheme = runtime.NewScheme()
@@ -20,5 +21,6 @@ func init() {
 	utilruntime.Must(catalogd.AddToScheme(Scheme))
 	utilruntime.Must(appsv1.AddToScheme(Scheme))
 	utilruntime.Must(corev1.AddToScheme(Scheme))
+	utilruntime.Must(pkocorev1alpha1.AddToScheme(Scheme))
 	//+kubebuilder:scaffold:scheme
 }
